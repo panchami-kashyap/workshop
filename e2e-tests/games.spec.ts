@@ -6,8 +6,9 @@ test.describe('Game Listing and Navigation', () => {
       await page.goto('/');
     });
 
-    await test.step('Verify games grid is visible', async () => {
+    await test.step('Verify filters and games grid are visible', async () => {
       const gamesGrid = page.getByTestId('games-grid');
+      await expect(page.getByTestId('game-filters')).toBeVisible();
       await expect(gamesGrid).toBeVisible();
     });
 
@@ -21,6 +22,42 @@ test.describe('Game Listing and Navigation', () => {
       const gameCards = page.getByTestId('game-card');
       await expect(gameCards.first().getByTestId('game-title')).toBeVisible();
       await expect(gameCards.first().getByTestId('game-title')).not.toBeEmpty();
+    });
+  });
+
+  test('should filter games by publisher and category selections', async ({ page }) => {
+    await test.step('Navigate to homepage and open filters', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('game-filters')).toBeVisible();
+    });
+
+    await test.step('Select a publisher filter', async () => {
+      await page.getByTestId('publisher-filter').selectOption({ label: 'CodeForge Studios' });
+      await page.getByTestId('apply-filters').click();
+    });
+
+    await test.step('Verify filtered cards are for the selected publisher', async () => {
+      const visibleCards = page.locator('[data-testid="game-card"]:not([hidden])');
+      await expect(visibleCards.first()).toBeVisible();
+      expect(await visibleCards.count()).toBeGreaterThan(0);
+      const firstPublisher = await visibleCards.first().getAttribute('data-game-publisher-name');
+      expect(firstPublisher).toBe('CodeForge Studios');
+    });
+
+    await test.step('Apply a category filter after the publisher selection', async () => {
+      await page.getByTestId('category-filter').selectOption({ label: 'Strategy' });
+      await page.getByTestId('apply-filters').click();
+    });
+
+    await test.step('Verify the filtered grid matches both selections', async () => {
+      const visibleCards = page.locator('[data-testid="game-card"]:not([hidden])');
+      await expect(visibleCards.first()).toBeVisible();
+      expect(await visibleCards.count()).toBeGreaterThan(0);
+      for (let i = 0; i < await visibleCards.count(); i++) {
+        const card = visibleCards.nth(i);
+        await expect(card).toHaveAttribute('data-game-publisher-name', 'CodeForge Studios');
+        await expect(card).toHaveAttribute('data-game-category-name', 'Strategy');
+      }
     });
   });
 
